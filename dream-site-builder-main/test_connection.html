@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase 连接测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .test-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status.pending { background: #fef3c7; color: #92400e; }
+        .status.success { background: #d1fae5; color: #065f46; }
+        .status.error { background: #fee2e2; color: #991b1b; }
+        .result {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .summary {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 Supabase 数据连接测试</h1>
+        <p class="subtitle">验证数据库连接和数据完整性</p>
+
+        <button onclick="runAllTests()" id="testBtn">运行所有测试</button>
+
+        <!-- 测试1: 连接测试 -->
+        <div class="test-section">
+            <div class="test-title">
+                <span>1. 连接测试</span>
+                <span class="status pending" id="status1">待测试</span>
+            </div>
+            <div class="result" id="result1" style="display: none;"></div>
+        </div>
+
+        <!-- 测试2: 用户表测试 -->
+        <div class="test-section">
+            <div class="test-title">
+                <span>2. 用户表 (users)</span>
+                <span class="status pending" id="status2">待测试</span>
+            </div>
+            <div class="result" id="result2" style="display: none;"></div>
+        </div>
+
+        <!-- 测试3: 涨停数据测试 -->
+        <div class="test-section">
+            <div class="test-title">
+                <span>3. 涨停数据 (limit_list_ths)</span>
+                <span class="status pending" id="status3">待测试</span>
+            </div>
+            <div class="result" id="result3" style="display: none;"></div>
+        </div>
+
+        <!-- 测试4: 龙虎榜数据测试 -->
+        <div class="test-section">
+            <div class="test-title">
+                <span>4. 龙虎榜数据 (top_list)</span>
+                <span class="status pending" id="status4">待测试</span>
+            </div>
+            <div class="result" id="result4" style="display: none;"></div>
+        </div>
+
+        <!-- 测试5: 板块数据测试 -->
+        <div class="test-section">
+            <div class="test-title">
+                <span>5. 板块数据 (limit_cpt_list)</span>
+                <span class="status pending" id="status5">待测试</span>
+            </div>
+            <div class="result" id="result5" style="display: none;"></div>
+        </div>
+
+        <!-- 汇总 -->
+        <div class="summary" style="display: none;" id="summary">
+            <h3 style="margin-bottom: 15px;">测试汇总</h3>
+            <div class="summary-item">
+                <span>通过测试:</span>
+                <strong id="passCount">0</strong>
+            </div>
+            <div class="summary-item">
+                <span>失败测试:</span>
+                <strong id="failCount">0</strong>
+            </div>
+            <div class="summary-item">
+                <span>总数据条数:</span>
+                <strong id="totalRecords">0</strong>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+        // Supabase 配置
+        const SUPABASE_URL = 'https://iuwwevhgjzqbnuclkate.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1d3dldmhnanpxYm51Y2xrYXRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY5Mjk0MzMsImV4cCI6MjA1MjUwNTQzM30.DdqCU_8Cl8GBvNQJcGLrgLOBkdiFnpBvvMYT0VG1DdI';
+
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        window.runAllTests = async function() {
+            const btn = document.getElementById('testBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loader"></span> 测试中...';
+
+            let passCount = 0;
+            let failCount = 0;
+            let totalRecords = 0;
+
+            // 测试1: 连接测试
+            try {
+                updateStatus(1, 'testing');
+                const { data, error } = await supabase.from('limit_list_ths').select('count');
+                if (error) throw error;
+                updateStatus(1, 'success');
+                showResult(1, `✅ 连接成功！数据库响应正常`);
+                passCount++;
+            } catch (error) {
+                updateStatus(1, 'error');
+                showResult(1, `❌ 连接失败: ${error.message}`);
+                failCount++;
+            }
+
+            // 测试2: 用户表
+            try {
+                updateStatus(2, 'testing');
+                const { data, error } = await supabase.from('users').select('*').limit(5);
+                if (error) throw error;
+                updateStatus(2, 'success');
+                showResult(2, `✅ 找到 ${data.length} 个用户\n${JSON.stringify(data, null, 2)}`);
+                passCount++;
+                totalRecords += data.length;
+            } catch (error) {
+                updateStatus(2, 'error');
+                showResult(2, `❌ 查询失败: ${error.message}\n提示: 请先执行 user_table.sql 创建用户表`);
+                failCount++;
+            }
+
+            // 测试3: 涨停数据
+            try {
+                updateStatus(3, 'testing');
+                const { data, error, count } = await supabase
+                    .from('limit_list_ths')
+                    .select('*', { count: 'exact' })
+                    .order('trade_date', { ascending: false })
+                    .limit(10);
+                if (error) throw error;
+                updateStatus(3, 'success');
+                showResult(3, `✅ 总记录数: ${count}\n最新10条:\n${JSON.stringify(data.slice(0, 3), null, 2)}`);
+                passCount++;
+                totalRecords += count;
+            } catch (error) {
+                updateStatus(3, 'error');
+                showResult(3, `❌ 查询失败: ${error.message}`);
+                failCount++;
+            }
+
+            // 测试4: 龙虎榜
+            try {
+                updateStatus(4, 'testing');
+                const { data, error, count } = await supabase
+                    .from('top_list')
+                    .select('*', { count: 'exact' })
+                    .order('trade_date', { ascending: false })
+                    .limit(10);
+                if (error) throw error;
+                updateStatus(4, 'success');
+                showResult(4, `✅ 总记录数: ${count}\n最新10条:\n${JSON.stringify(data.slice(0, 3), null, 2)}`);
+                passCount++;
+                totalRecords += count;
+            } catch (error) {
+                updateStatus(4, 'error');
+                showResult(4, `❌ 查询失败: ${error.message}`);
+                failCount++;
+            }
+
+            // 测试5: 板块数据
+            try {
+                updateStatus(5, 'testing');
+                const { data, error, count } = await supabase
+                    .from('limit_cpt_list')
+                    .select('*', { count: 'exact' })
+                    .order('trade_date', { ascending: false })
+                    .limit(10);
+                if (error) throw error;
+                updateStatus(5, 'success');
+                showResult(5, `✅ 总记录数: ${count}\n最新10条:\n${JSON.stringify(data.slice(0, 3), null, 2)}`);
+                passCount++;
+                totalRecords += count;
+            } catch (error) {
+                updateStatus(5, 'error');
+                showResult(5, `❌ 查询失败: ${error.message}`);
+                failCount++;
+            }
+
+            // 显示汇总
+            document.getElementById('passCount').textContent = passCount;
+            document.getElementById('failCount').textContent = failCount;
+            document.getElementById('totalRecords').textContent = totalRecords.toLocaleString();
+            document.getElementById('summary').style.display = 'block';
+
+            btn.disabled = false;
+            btn.textContent = '重新测试';
+        };
+
+        function updateStatus(testNum, status) {
+            const statusEl = document.getElementById(`status${testNum}`);
+            statusEl.className = `status ${status}`;
+            const statusText = {
+                'pending': '待测试',
+                'testing': '测试中...',
+                'success': '✓ 通过',
+                'error': '✗ 失败'
+            };
+            statusEl.textContent = statusText[status] || status;
+        }
+
+        function showResult(testNum, message) {
+            const resultEl = document.getElementById(`result${testNum}`);
+            resultEl.textContent = message;
+            resultEl.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

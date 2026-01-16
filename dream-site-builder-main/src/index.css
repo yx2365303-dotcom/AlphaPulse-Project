@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* AlphaPulse 护眼深色主题设计系统 */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@layer base {
+  :root {
+    /* 护眼深色模式 - 默认激活 */
+    --background: 222 47% 11%;
+    --foreground: 214 32% 91%;
+
+    --card: 217 33% 17%;
+    --card-foreground: 214 32% 91%;
+
+    --popover: 217 33% 17%;
+    --popover-foreground: 214 32% 91%;
+
+    --primary: 187 94% 50%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 22%;
+    --secondary-foreground: 214 32% 91%;
+
+    --muted: 217 33% 22%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 232 92% 74%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 222 47% 11%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+
+    --border: 217 33% 25%;
+    --input: 217 33% 25%;
+    --ring: 187 94% 50%;
+
+    --radius: 0.5rem;
+
+    /* 金融数据专用色彩 */
+    --stock-up: 0 84% 60%;
+    --stock-down: 142 71% 45%;
+    --stock-flat: 215 20% 65%;
+
+    /* 柔和渐变 */
+    --gradient-primary: linear-gradient(135deg, hsl(187 94% 50% / 0.2), hsl(232 92% 74% / 0.2));
+    --gradient-card: linear-gradient(180deg, hsl(217 33% 19%), hsl(217 33% 15%));
+    
+    /* 阴影 */
+    --shadow-card: 0 4px 24px -4px hsl(222 47% 5% / 0.5);
+    --shadow-glow: 0 0 20px hsl(187 94% 50% / 0.15);
+
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 214 32% 91%;
+    --sidebar-primary: 187 94% 50%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 217 33% 22%;
+    --sidebar-accent-foreground: 214 32% 91%;
+    --sidebar-border: 217 33% 25%;
+    --sidebar-ring: 187 94% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* 数字和代码使用等宽字体 */
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* 滚动条样式 - 护眼配色 */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+}
+
+@layer components {
+  /* 金融数据卡片 */
+  .finance-card {
+    @apply rounded-lg border border-border bg-card p-4;
+    background: var(--gradient-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* 涨跌样式 */
+  .stock-up {
+    color: hsl(var(--stock-up));
+  }
+
+  .stock-down {
+    color: hsl(var(--stock-down));
+  }
+
+  .stock-flat {
+    color: hsl(var(--stock-flat));
+  }
+
+  /* 高亮徽章 */
+  .badge-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  /* 表格行悬停 */
+  .table-row-hover {
+    @apply transition-colors duration-150 hover:bg-secondary/50;
+  }
+
+  /* 数据指标卡片 */
+  .metric-card {
+    @apply finance-card flex flex-col gap-1;
+  }
+
+  .metric-label {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .metric-value {
+    @apply text-2xl font-semibold tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* 动画 */
+  .animate-pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  /* 渐变文字 */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+  }
+}
