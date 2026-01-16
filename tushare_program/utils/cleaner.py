@@ -16,11 +16,18 @@ def clean_dataframe(df):
     Returns:
         清理后的 DataFrame
     """
+    # 复制DataFrame避免修改原始数据
+    df = df.copy()
+    
     # 替换 inf/-inf 为 NaN
     df = df.replace([np.inf, -np.inf], np.nan)
     
-    # 统一处理所有 NaN
-    df = df.fillna(value=np.nan)
+    # 使用where+notna的方式处理NaN，避免FutureWarning
+    # 这种方式不会触发downcasting警告
+    for col in df.columns:
+        if df[col].dtype == 'object':
+            # 对object类型使用None替换NaN
+            df[col] = df[col].where(df[col].notna(), None)
     
     return df
 

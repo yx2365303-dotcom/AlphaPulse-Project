@@ -63,11 +63,40 @@ def run_hot_concepts(trade_date, top_n=5):
         for code in hot_codes:
             logger.info(f"  处理板块: {code}")
             
-            # 板块成分股
-            result1 = fetcher.fetch_and_save('ths_member', 'ths_member', ts_code=code)
-            if result1:
-                success_count += 1
-            else:
+            # 板块成分股 - API返回字段需要映射到数据库字段
+            try:
+                member_df = fetcher.tushare.ths_member(ts_code=code)
+                if member_df is not None and not member_df.empty:
+                    # API返回: ts_code, con_code, con_name
+                    # 数据库需要: ts_code, code (映射自con_code), ...
+                    
+                    # 过滤掉con_code字段为空的记录
+                    if 'con_code' in member_df.columns:
+                        original_count = len(member_df)
+                        member_df = member_df[member_df['con_code'].notna()]
+                        filtered_count = len(member_df)
+                        if original_count > filtered_count:
+                            logger.info(f"    已过滤 {original_count - filtered_count} 条无效成分股记录")
+                        
+                        # 添加字段映射：数据库的code字段 = API的con_code字段
+                        if 'code' not in member_df.columns:
+                            member_df['code'] = member_df['con_code']
+                    
+                    # 保存过滤后的数据
+                    if not member_df.empty:
+                        result1 = fetcher.save_to_supabase(member_df, 'ths_member')
+                        if result1:
+                            success_count += 1
+                        else:
+                            fail_count += 1
+                    else:
+                        logger.warning("    过滤后无有效数据")
+                        fail_count += 1
+                else:
+                    logger.warning("    未获取到成分股数据")
+                    fail_count += 1
+            except Exception as e:
+                logger.error(f"    获取成分股数据异常: {e}")
                 fail_count += 1
             
             # 板块指数日线

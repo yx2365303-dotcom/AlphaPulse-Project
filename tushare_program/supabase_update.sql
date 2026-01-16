@@ -1,20 +1,13 @@
--- Supabase 数据库修复SQL
+-- =====================================================
+-- Supabase 数据库字段补全脚本 (增量更新)
 -- 执行日期: 2026-01-16
--- 用途: 修复缺失字段和约束问题
+-- 用途: 添加所有API返回但数据库缺失的字段
+-- 注意: 这是增量脚本，可以在已有数据的表上安全执行
+-- =====================================================
 
--- ===== 1. equity_daily 表 - 修复 RLS 策略 =====
--- 问题: row-level security policy 阻止写入
--- 解决: 禁用 RLS 或添加写入策略
+-- 如果之前已执行过 supabase_fix.sql，请直接执行此脚本的新增部分
 
-ALTER TABLE equity_daily DISABLE ROW LEVEL SECURITY;
--- 或者添加允许写入的策略：
--- CREATE POLICY "允许service_role写入" ON equity_daily
---   FOR INSERT TO service_role USING (true);
-
--- ===== 2. top_list 表 - 添加缺失字段 =====
--- API返回字段: trade_date, ts_code, name, close, pct_change, turnover_rate,
---              amount, l_sell, l_buy, l_amount, net_amount, net_rate, 
---              amount_rate, float_values, reason
+-- ===== 1. top_list 表 - 添加完整字段 =====
 ALTER TABLE top_list ADD COLUMN IF NOT EXISTS close float8;
 ALTER TABLE top_list ADD COLUMN IF NOT EXISTS pct_change float8;
 ALTER TABLE top_list ADD COLUMN IF NOT EXISTS turnover_rate float8;
@@ -23,30 +16,13 @@ ALTER TABLE top_list ADD COLUMN IF NOT EXISTS l_sell float8;
 ALTER TABLE top_list ADD COLUMN IF NOT EXISTS l_buy float8;
 ALTER TABLE top_list ADD COLUMN IF NOT EXISTS l_amount float8;
 ALTER TABLE top_list ADD COLUMN IF NOT EXISTS net_amount float8;
+-- 以下字段之前可能已添加
 ALTER TABLE top_list ADD COLUMN IF NOT EXISTS net_rate float8;
 ALTER TABLE top_list ADD COLUMN IF NOT EXISTS amount_rate float8;
 ALTER TABLE top_list ADD COLUMN IF NOT EXISTS float_values float8;
 ALTER TABLE top_list ADD COLUMN IF NOT EXISTS reason varchar(200);
 
--- ===== 3. top_inst 表 - 修复唯一约束 =====
--- 问题: 同一天同一股票同一类型机构可以有多条记录（buy/sell数值不同，reason不同）
--- 解决方案: 删除主键约束，改用自动生成的ID或者不设置主键
-
--- 删除所有约束
-ALTER TABLE top_inst DROP CONSTRAINT IF EXISTS top_inst_pkey;
-ALTER TABLE top_inst DROP CONSTRAINT IF EXISTS top_inst_trade_date_ts_code_key;
-ALTER TABLE top_inst DROP CONSTRAINT IF EXISTS top_inst_trade_date_ts_code_exalter_key;
-
--- 不添加新的主键约束，让Supabase使用内置的ID
--- 或者如果需要，可以创建一个复合索引用于加速查询
-CREATE INDEX IF NOT EXISTS idx_top_inst_lookup 
-ON top_inst (trade_date, ts_code);
-
--- ===== 4. kpl_list 表 - 添加缺失字段 =====
--- API返回字段: ts_code, name, trade_date, lu_time, ld_time, open_time, last_time,
---              lu_desc, tag, theme, net_change, bid_amount, status, bid_change,
---              bid_turnover, lu_bid_vol, pct_chg, bid_pct_chg, rt_pct_chg, 
---              limit_order, amount, turnover_rate, free_float, lu_limit_order
+-- ===== 2. kpl_list 表 - 添加完整字段 =====
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS lu_time varchar(20);
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS ld_time varchar(20);
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS open_time varchar(20);
@@ -55,26 +31,22 @@ ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS lu_desc varchar(200);
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS tag varchar(100);
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS theme varchar(200);
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS net_change float8;
-ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS bid_amount float8;
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS status varchar(20);
+ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS pct_chg float8;
+ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS amount float8;
+-- 以下字段之前可能已添加
+ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS bid_amount float8;
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS bid_change float8;
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS bid_turnover float8;
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS lu_bid_vol float8;
-ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS pct_chg float8;
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS bid_pct_chg float8;
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS rt_pct_chg float8;
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS limit_order float8;
-ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS amount float8;
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS turnover_rate float8;
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS free_float float8;
 ALTER TABLE kpl_list ADD COLUMN IF NOT EXISTS lu_limit_order float8;
 
--- ===== 5. kpl_concept 表 - 添加缺失字段 =====
-ALTER TABLE kpl_concept ADD COLUMN IF NOT EXISTS z_t_num integer;
-
--- ===== 6. ths_daily 表 - 添加缺失字段（如果需要板块日线功能） =====
--- API返回字段: ts_code, trade_date, open, high, low, close, pre_close, 
---              avg_price, change, pct_change, vol, turnover_rate
+-- ===== 3. ths_daily 表 - 添加完整字段 =====
 ALTER TABLE ths_daily ADD COLUMN IF NOT EXISTS open float8;
 ALTER TABLE ths_daily ADD COLUMN IF NOT EXISTS high float8;
 ALTER TABLE ths_daily ADD COLUMN IF NOT EXISTS low float8;
@@ -86,5 +58,15 @@ ALTER TABLE ths_daily ADD COLUMN IF NOT EXISTS pct_change float8;
 ALTER TABLE ths_daily ADD COLUMN IF NOT EXISTS vol float8;
 ALTER TABLE ths_daily ADD COLUMN IF NOT EXISTS turnover_rate float8;
 
+-- ===== 4. top_inst 表 - 彻底移除主键约束 =====
+-- 原因: 同一天同一股票同一类型机构可以有多条不同的记录
+ALTER TABLE top_inst DROP CONSTRAINT IF EXISTS top_inst_pkey;
+ALTER TABLE top_inst DROP CONSTRAINT IF EXISTS top_inst_trade_date_ts_code_key;
+ALTER TABLE top_inst DROP CONSTRAINT IF EXISTS top_inst_trade_date_ts_code_exalter_key;
+
+-- 创建查询索引（可选，用于提升查询性能）
+CREATE INDEX IF NOT EXISTS idx_top_inst_lookup ON top_inst (trade_date, ts_code);
+
 -- ===== 执行完毕 =====
--- 请在 Supabase SQL Editor 中执行以上SQL，然后重新运行程序
+-- 请检查执行结果，应该看到 "Success. No rows returned"
+-- 然后返回程序重新运行: python main.py

@@ -15,9 +15,12 @@ def get_trade_date():
     return date.today().strftime("%Y%m%d")
 
 
-def run_daily_tasks():
+def run_daily_tasks(trade_date=None):
     """
     执行日度数据抓取任务
+    
+    Args:
+        trade_date: 交易日期 YYYYMMDD，如果为None则使用配置或当天
     
     包括：
     - 龙虎榜数据
@@ -25,7 +28,8 @@ def run_daily_tasks():
     - 开盘啦数据
     - 同花顺概念指数日线
     """
-    trade_date = get_trade_date()
+    if trade_date is None:
+        trade_date = get_trade_date()
     logger.info(f"=== 开始日度数据抓取 (日期: {trade_date}) ===")
     
     fetcher = DataFetcher()

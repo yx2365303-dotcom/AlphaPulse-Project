@@ -86,6 +86,38 @@ class DataFetcher:
         
         return False
     
+    def save_to_supabase(self, df, table_name):
+        """
+        直接保存DataFrame到Supabase（用于已处理的数据）
+        
+        Args:
+            df: pandas DataFrame
+            table_name: Supabase 表名
+            
+        Returns:
+            bool: 是否成功
+        """
+        try:
+            if df is None or df.empty:
+                logger.warning(f"  [{table_name}] 无数据可保存")
+                return False
+            
+            # 数据清洗
+            df = clean_dataframe(df)
+            
+            # 转换为记录
+            records = df.to_dict(orient="records")
+            records = [clean_record(r) for r in records]
+            
+            # 写入数据库
+            self.supabase.table(table_name).upsert(records).execute()
+            logger.info(f"  [成功] 写入 {len(records)} 条到 {table_name}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"  保存失败: {e}")
+            return False
+    
     def _clean_data(self, df, api_method_name):
         """数据清洗"""
         # 1. 处理日期格式
